@@ -7,7 +7,7 @@ import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { loginSchema, userRegisterSchema, userLoginSchema, createOrderSchema, validateKeySchema, generateKeysSchema, scriptExecuteSchema, insertShowcaseSchema, insertPackageSchema, insertTeamSchema, insertTestimonialSchema, insertGameSupportSchema } from "@shared/schema";
 import { z } from "zod";
-import { cashifyCheckStatus, cashifyGenerateQrisV1 } from "./cashify";
+import { casakuCheckStatus, casakuGenerateQrisV1 } from "./casaku";
 
 const JWT_SECRET = process.env.SESSION_SECRET || "kingvypers-secret-key";
 const USER_JWT_SECRET = process.env.USER_JWT_SECRET || JWT_SECRET;
@@ -81,7 +81,7 @@ const apiLimiter = rateLimit({
     if (url.startsWith("/api/user/")) return 1000;
     return 100;
   },
-  skip: (req) => String(req.originalUrl || "").startsWith("/api/webhooks/cashify"),
+  skip: (req) => String(req.originalUrl || "").startsWith("/api/webhooks/casaku"),
   message: { message: "Too many requests, please try again later" },
 });
 
@@ -111,10 +111,10 @@ export async function registerRoutes(
 
   await ensureDefaultAdmin();
 
-  app.post("/api/webhooks/cashify", async (req, res) => {
+  app.post("/api/webhooks/casaku", async (req, res) => {
     try {
-      const secret = process.env.CASHIFY_WEBHOOK_SECRET?.trim();
-      if (!secret) return res.status(500).json({ message: "Cashify webhook secret belum dikonfigurasi" });
+      const secret = process.env.CASAKU_WEBHOOK_SECRET?.trim();
+      if (!secret) return res.status(500).json({ message: "Casaku webhook secret belum dikonfigurasi" });
 
       const header = (name: string) => {
         const v = req.headers[name.toLowerCase()];
@@ -124,13 +124,13 @@ export async function registerRoutes(
 
       const providedSecret =
         header("x-webhook-secret") ||
-        header("x-cashify-webhook-secret") ||
-        header("x-cashify-secret") ||
+        header("x-casaku-webhook-secret") ||
+        header("x-casaku-secret") ||
         null;
 
       const providedSignature =
         header("x-webhook-signature") ||
-        header("x-cashify-signature") ||
+        header("x-casaku-signature") ||
         header("x-signature") ||
         null;
 
@@ -221,7 +221,7 @@ export async function registerRoutes(
 
       return res.json({ message: "Webhook processed", ok: true, orderId: order.id, status: order.status });
     } catch (error) {
-      console.error("Cashify webhook error:", error);
+      console.error("Casaku webhook error:", error);
       if (error instanceof HttpError) {
         return res.status(error.status).json({ message: error.message });
       }
@@ -517,26 +517,26 @@ export async function registerRoutes(
         status: "pending",
       });
 
-      const qrisId = process.env.CASHIFY_QRIS_ID?.trim();
-      if (!qrisId) return res.status(500).json({ message: "Cashify belum dikonfigurasi: CASHIFY_QRIS_ID kosong" });
+      const qrisId = process.env.CASAKU_QRIS_ID?.trim();
+      if (!qrisId) return res.status(500).json({ message: "Casaku belum dikonfigurasi: CASAKU_QRIS_ID kosong" });
 
-      const packageIds = String(process.env.CASHIFY_PACKAGE_IDS || "id.dana")
+      const packageIds = String(process.env.CASAKU_PACKAGE_IDS || "id.dana")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      if (packageIds.length === 0) return res.status(500).json({ message: "Cashify belum dikonfigurasi: CASHIFY_PACKAGE_IDS kosong" });
+      if (packageIds.length === 0) return res.status(500).json({ message: "Casaku belum dikonfigurasi: CASAKU_PACKAGE_IDS kosong" });
       const invalidPackageId = packageIds.find((id) => !id.includes(".") || /\s/.test(id));
       if (invalidPackageId) {
         return res.status(500).json({
-          message: `CASHIFY_PACKAGE_IDS tidak valid ('${invalidPackageId}'). Harus android package name, contoh: id.dana, id.ovo, com.shopee.id`,
+          message: `CASAKU_PACKAGE_IDS tidak valid ('${invalidPackageId}'). Harus android package name, contoh: id.dana, id.ovo, com.shopee.id`,
         });
       }
 
-      const expiredInMinutes = Math.max(1, parseInt(String(process.env.CASHIFY_EXPIRED_MINUTES || "15")) || 15);
-      const useUniqueCode = String(process.env.CASHIFY_USE_UNIQUE_CODE || "true").toLowerCase() !== "false";
+      const expiredInMinutes = Math.max(1, parseInt(String(process.env.CASAKU_EXPIRED_MINUTES || "15")) || 15);
+      const useUniqueCode = String(process.env.CASAKU_USE_UNIQUE_CODE || "true").toLowerCase() !== "false";
       const amount = Math.max(0, Math.round(parseFloat(String(pkg.price)) || 0));
 
-      const payment = await cashifyGenerateQrisV1({
+      const payment = await casakuGenerateQrisV1({
         qrisId,
         amount,
         useUniqueCode,
@@ -546,7 +546,7 @@ export async function registerRoutes(
 
       const expiresAt = new Date(Date.now() + expiredInMinutes * 60_000);
       await storage.updateOrder(order.id, {
-        paymentProvider: "cashify",
+        paymentProvider: "casaku",
         paymentOrderId: payment.transactionId,
         paymentLinkCode: null,
         paymentLinkUrl: null,
@@ -568,7 +568,7 @@ export async function registerRoutes(
           buyLink: "",
         },
         payment: {
-          provider: "cashify",
+          provider: "casaku",
           orderId: payment.transactionId,
           linkCode: null,
           url: null,
@@ -597,11 +597,11 @@ export async function registerRoutes(
       if (order.status !== "pending" && order.status !== "waiting_verification") {
         return res.status(400).json({ message: `Order tidak bisa dicek dari status '${order.status}'` });
       }
-      if (order.paymentProvider !== "cashify" || !order.paymentOrderId) {
-        return res.status(400).json({ message: "Order ini belum punya transaksi Cashify" });
+      if (order.paymentProvider !== "casaku" || !order.paymentOrderId) {
+        return res.status(400).json({ message: "Order ini belum punya transaksi Casaku" });
       }
 
-      const remote = await cashifyCheckStatus(order.paymentOrderId);
+      const remote = await casakuCheckStatus(order.paymentOrderId);
       const remoteStatus = String(remote.status || "").toLowerCase();
       if (remoteStatus === "paid" || remoteStatus === "success") {
         try {
@@ -662,26 +662,26 @@ export async function registerRoutes(
       if (!order) return res.status(404).json({ message: "Order not found" });
       if (order.userId !== req.userId) return res.status(403).json({ message: "Forbidden" });
       if (order.status !== "pending") return res.status(400).json({ message: "Payment link hanya bisa dibuat saat status pending" });
-      const qrisId = process.env.CASHIFY_QRIS_ID?.trim();
-      if (!qrisId) return res.status(500).json({ message: "Cashify belum dikonfigurasi: CASHIFY_QRIS_ID kosong" });
+      const qrisId = process.env.CASAKU_QRIS_ID?.trim();
+      if (!qrisId) return res.status(500).json({ message: "Casaku belum dikonfigurasi: CASAKU_QRIS_ID kosong" });
 
-      const packageIds = String(process.env.CASHIFY_PACKAGE_IDS || "id.dana")
+      const packageIds = String(process.env.CASAKU_PACKAGE_IDS || "id.dana")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      if (packageIds.length === 0) return res.status(500).json({ message: "Cashify belum dikonfigurasi: CASHIFY_PACKAGE_IDS kosong" });
+      if (packageIds.length === 0) return res.status(500).json({ message: "Casaku belum dikonfigurasi: CASAKU_PACKAGE_IDS kosong" });
       const invalidPackageId = packageIds.find((id) => !id.includes(".") || /\s/.test(id));
       if (invalidPackageId) {
         return res.status(500).json({
-          message: `CASHIFY_PACKAGE_IDS tidak valid ('${invalidPackageId}'). Harus android package name, contoh: id.dana, id.ovo, com.shopee.id`,
+          message: `CASAKU_PACKAGE_IDS tidak valid ('${invalidPackageId}'). Harus android package name, contoh: id.dana, id.ovo, com.shopee.id`,
         });
       }
 
-      const expiredInMinutes = Math.max(1, parseInt(String(process.env.CASHIFY_EXPIRED_MINUTES || "15")) || 15);
-      const useUniqueCode = String(process.env.CASHIFY_USE_UNIQUE_CODE || "true").toLowerCase() !== "false";
+      const expiredInMinutes = Math.max(1, parseInt(String(process.env.CASAKU_EXPIRED_MINUTES || "15")) || 15);
+      const useUniqueCode = String(process.env.CASAKU_USE_UNIQUE_CODE || "true").toLowerCase() !== "false";
       const amount = Math.max(0, Math.round(parseFloat(String(order.price)) || 0));
 
-      const payment = await cashifyGenerateQrisV1({
+      const payment = await casakuGenerateQrisV1({
         qrisId,
         amount,
         useUniqueCode,
@@ -691,7 +691,7 @@ export async function registerRoutes(
 
       const expiresAt = new Date(Date.now() + expiredInMinutes * 60_000);
       await storage.updateOrder(order.id, {
-        paymentProvider: "cashify",
+        paymentProvider: "casaku",
         paymentOrderId: payment.transactionId,
         paymentLinkCode: null,
         paymentLinkUrl: null,
@@ -706,7 +706,7 @@ export async function registerRoutes(
         orderId: order.id,
         status: order.status,
         payment: {
-          provider: "cashify",
+          provider: "casaku",
           orderId: payment.transactionId,
           linkCode: null,
           url: null,

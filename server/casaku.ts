@@ -1,4 +1,4 @@
-type CashifyGenerateQrisV1Response = {
+type CasakuGenerateQrisV1Response = {
   status: number;
   data?: {
     qr_string: string;
@@ -12,7 +12,7 @@ type CashifyGenerateQrisV1Response = {
   message?: string;
 };
 
-type CashifyCheckStatusResponse = {
+type CasakuCheckStatusResponse = {
   status: number;
   data?: {
     transactionId: string;
@@ -24,12 +24,12 @@ type CashifyCheckStatusResponse = {
 };
 
 function getBaseUrl() {
-  return process.env.CASHIFY_BASE_URL?.trim() || "https://cashify.my.id/api/generate";
+  return process.env.CASAKU_BASE_URL?.trim() || "https://api.casaku.id/api/generate";
 }
 
 function getLicenseKey() {
-  const key = process.env.CASHIFY_LICENSE;
-  if (!key?.trim()) throw new Error("CASHIFY_LICENSE is not set");
+  const key = process.env.CASAKU_LICENSE;
+  if (!key?.trim()) throw new Error("CASAKU_LICENSE is not set");
   return key.trim();
 }
 
@@ -43,13 +43,13 @@ async function parseJsonSafe(res: Response): Promise<any> {
   }
 }
 
-export async function cashifyGenerateQrisV1(params: {
+export async function casakuGenerateQrisV1(params: {
   qrisId: string;
   amount: number;
   useUniqueCode: boolean;
   packageIds: string[];
   expiredInMinutes: number;
-}): Promise<NonNullable<CashifyGenerateQrisV1Response["data"]>> {
+}): Promise<NonNullable<CasakuGenerateQrisV1Response["data"]>> {
   const baseUrl = getBaseUrl();
   const license = getLicenseKey();
 
@@ -65,14 +65,14 @@ export async function cashifyGenerateQrisV1(params: {
     }),
   });
 
-  const json = (await parseJsonSafe(res)) as CashifyGenerateQrisV1Response;
+  const json = (await parseJsonSafe(res)) as CasakuGenerateQrisV1Response;
   if (!res.ok || json.status !== 200 || !json.data?.transactionId || !json.data?.qr_string) {
-    throw new Error(json.message || `Cashify generate qris failed (${res.status})`);
+    throw new Error(json.message || `Casaku generate qris failed (${res.status})`);
   }
   return json.data;
 }
 
-export async function cashifyCheckStatus(transactionId: string): Promise<NonNullable<CashifyCheckStatusResponse["data"]>> {
+export async function casakuCheckStatus(transactionId: string): Promise<NonNullable<CasakuCheckStatusResponse["data"]>> {
   const baseUrl = getBaseUrl();
   const license = getLicenseKey();
 
@@ -82,10 +82,9 @@ export async function cashifyCheckStatus(transactionId: string): Promise<NonNull
     body: JSON.stringify({ transactionId }),
   });
 
-  const json = (await parseJsonSafe(res)) as CashifyCheckStatusResponse;
+  const json = (await parseJsonSafe(res)) as CasakuCheckStatusResponse;
   if (!res.ok || json.status !== 200 || !json.data?.transactionId) {
-    throw new Error(json.message || `Cashify check status failed (${res.status})`);
+    throw new Error(json.message || `Casaku check status failed (${res.status})`);
   }
   return json.data;
 }
-

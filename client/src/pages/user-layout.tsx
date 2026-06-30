@@ -1,7 +1,7 @@
 "use client"
 
 import { Switch, Route, Redirect, Link, useLocation } from "wouter";
-import { Key, Package, ShoppingCart, User, LogOut } from "lucide-react";
+import { Key, Package, ShoppingCart, User, LogOut, ChevronRight } from "lucide-react";
 import { HeaderLogo } from "@/components/header-logo";
 import { useUserAuth } from "@/lib/user-auth";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,9 @@ import { UserOrders } from "./user-orders";
 import { UserAccount } from "./user-account";
 
 const navItems = [
-  { title: "Dashboard", url: "/user/dashboard", icon: Key },
-  { title: "Packages", url: "/user/packages", icon: Package },
-  { title: "Order History", url: "/user/orders", icon: ShoppingCart },
+  { title: "My Keys", url: "/user/dashboard", icon: Key },
+  { title: "Store", url: "/user/packages", icon: Package },
+  { title: "Orders", url: "/user/orders", icon: ShoppingCart },
   { title: "Account", url: "/user/account", icon: User },
 ];
 
@@ -23,43 +23,58 @@ export function UserLayout() {
   const { logout, user } = useUserAuth();
 
   return (
-    <div className="flex min-h-screen flex-col w-full circuit-overlay bg-background pb-16 md:pb-0">
-      {/* Top Navbar */}
-      <header className="glass sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b px-4 md:px-6">
-        <div className="flex items-center gap-3">
-          <HeaderLogo size="md" />
-          <div className="flex flex-col hidden sm:flex">
-            <span className="font-serif text-lg font-bold tracking-wide">King Vypers</span>
-            <span className="text-xs text-muted-foreground">User Panel</span>
-          </div>
-        </div>
+    <div className="flex min-h-screen flex-col w-full bg-background">
+      {/* ── Top Navbar ── */}
+      <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-4 md:px-6">
+          {/* Brand */}
+          <Link href="/user/dashboard" className="flex items-center gap-2.5">
+            <HeaderLogo size="sm" />
+            <span className="font-semibold text-base tracking-tight hidden sm:inline">KingVypers</span>
+          </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {navItems.map((item) => {
-            const isActive = location === item.url || location.startsWith(item.url);
-            return (
-              <Link key={item.title} href={item.url}>
-                <span className={`flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-                  <item.icon className="h-4 w-4" />
-                  {item.title}
-                </span>
-              </Link>
-            );
-          })}
-          
-          <div className="ml-4 flex items-center gap-4 border-l pl-4">
-            <span className="text-sm font-medium">{user?.username}</span>
-            <Button variant="ghost" size="sm" onClick={logout} className="gap-2 text-muted-foreground hover:text-foreground">
+          {/* Desktop Nav Links */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = location === item.url || (item.url !== "/user/dashboard" && location.startsWith(item.url));
+              const isDashActive = item.url === "/user/dashboard" && (location === "/user/dashboard" || location === "/user");
+              const active = isActive || isDashActive;
+              return (
+                <Link key={item.title} href={item.url}>
+                  <span className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}>
+                    <item.icon className="h-4 w-4" />
+                    {item.title}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Desktop User + Logout */}
+          <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                {user?.username?.[0]?.toUpperCase() || "U"}
+              </div>
+              <span className="text-sm font-medium max-w-[120px] truncate">{user?.username}</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground h-8 px-2">
               <LogOut className="h-4 w-4" />
-              Logout
             </Button>
           </div>
-        </nav>
+
+          {/* Mobile: Avatar only (logout is in Account page) */}
+          <div className="md:hidden flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              {user?.username?.[0]?.toUpperCase() || "U"}
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 overflow-x-hidden">
+      {/* ── Main Content ── */}
+      <main className="flex-1 w-full mx-auto max-w-7xl px-4 py-5 md:px-6 md:py-6 pb-20 md:pb-6">
         <Switch>
           <Route path="/user" component={() => <Redirect to="/user/dashboard" />} />
           <Route path="/user/dashboard" component={UserKeys} />
@@ -70,19 +85,23 @@ export function UserLayout() {
         </Switch>
       </main>
 
-      {/* Bottom Navigation (Mobile Only) */}
-      <nav className="glass md:hidden fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t px-2 pb-safe">
-        {navItems.map((item) => {
-          const isActive = location === item.url || location.startsWith(item.url);
-          return (
-            <Link key={item.title} href={item.url} className="flex-1">
-              <div className={`flex flex-col items-center justify-center gap-1 w-full h-full p-2 transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                <item.icon className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-[2px]"}`} />
-                <span className="text-[10px] font-medium leading-none">{item.title}</span>
-              </div>
-            </Link>
-          );
-        })}
+      {/* ── Bottom Navigation (Mobile) ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="flex h-14 items-center justify-around px-1">
+          {navItems.map((item) => {
+            const isActive = location === item.url || (item.url !== "/user/dashboard" && location.startsWith(item.url));
+            const isDashActive = item.url === "/user/dashboard" && (location === "/user/dashboard" || location === "/user");
+            const active = isActive || isDashActive;
+            return (
+              <Link key={item.title} href={item.url} className="flex-1">
+                <div className={`flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}>
+                  <item.icon className={`h-5 w-5 ${active ? "stroke-[2.5px]" : ""}`} />
+                  <span className={`text-[10px] leading-tight ${active ? "font-semibold" : "font-medium"}`}>{item.title}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );

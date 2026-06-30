@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react";
-import { Cpu, Loader2, RotateCcw, Clock } from "lucide-react";
+import { Cpu, Loader2, RotateCcw, Clock, KeyRound, Shield, RefreshCw } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-// Removed Table imports
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useUserAuth } from "@/lib/user-auth";
@@ -33,9 +32,9 @@ type UserKeyRow = {
 };
 
 function formatDateId(value: string | null) {
-  if (!value) return "—";
+  if (!value) return "\u2014";
   const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
+  if (isNaN(d.getTime())) return "\u2014";
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -48,6 +47,12 @@ function formatRemaining(ms: number): string {
   const hours = Math.floor(totalMinutes / 60);
   if (hours > 0) return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function statusVariant(status: string) {
+  if (status === "active") return "default" as const;
+  if (status === "expired") return "destructive" as const;
+  return "secondary" as const;
 }
 
 export function UserKeys() {
@@ -114,158 +119,159 @@ export function UserKeys() {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div>
-        <h1 className="font-serif text-3xl font-bold tracking-wide">Dashboard</h1>
-        <p className="text-muted-foreground">Ringkasan key kamu dan reset HWID.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">My Keys</h1>
+        <p className="text-sm text-muted-foreground mt-1">Kelola license key dan hardware ID kamu.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="glass">
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Total Key</div>
-            <div className="mt-2 text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="glass">
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Key Aktif</div>
-            <div className="mt-2 text-2xl font-bold">{stats.active}</div>
-            {stats.expired ? <div className="mt-1 text-xs text-muted-foreground">Expired: {stats.expired}</div> : null}
-          </CardContent>
-        </Card>
-        <Card className="glass">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <div className="text-sm text-muted-foreground">Reset HWID Ready</div>
-              <RotateCcw className="h-4 w-4 text-muted-foreground" />
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <KeyRound className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Total</span>
+          </div>
+          <div className="text-2xl font-bold tabular-nums">{stats.total}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <Shield className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Aktif</span>
+          </div>
+          <div className="text-2xl font-bold tabular-nums text-emerald-500">{stats.active}</div>
+          {stats.expired > 0 && <div className="text-xs text-muted-foreground mt-0.5">{stats.expired} expired</div>}
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            <RefreshCw className="h-4 w-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Reset</span>
+          </div>
+          <div className="text-2xl font-bold tabular-nums">{stats.resetReady}</div>
+        </div>
+      </div>
+
+      {/* Reset HWID Dialog */}
+      <AlertDialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
+          if (!open) setResetTargetKey(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Hardware ID</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ini akan melepas device yang terikat ke key ini. Setelah reset, key bisa dipakai di device baru.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {resetTargetKey ? (
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Key</span>
+                <span className="font-mono font-medium">{resetTargetKey.keyCode}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">HWID</span>
+                <span className="max-w-[200px] truncate font-mono text-xs">{resetTargetKey.hwid || "\u2014"}</span>
+              </div>
             </div>
-            <div className="mt-2 text-2xl font-bold">{stats.resetReady}</div>
-          </CardContent>
-        </Card>
-      </div>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetHwidMutation.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => resetTargetKey && resetHwidMutation.mutate(resetTargetKey)}
+              disabled={!resetTargetKey || resetHwidMutation.isPending}
+            >
+              {resetHwidMutation.isPending ? "Memproses..." : "Reset HWID"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-      <Card className="glass">
-        <CardHeader>
-          <CardTitle>My Keys</CardTitle>
-          <CardDescription>Reset HWID hanya tersedia untuk key yang sudah aktif dan sudah terikat device.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog
-            open={resetDialogOpen}
-            onOpenChange={(open) => {
-              setResetDialogOpen(open);
-              if (!open) setResetTargetKey(null);
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Reset HWID</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Reset HWID akan melepas device yang terikat. Setelah reset, key bisa dipakai di device baru.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              {resetTargetKey ? (
-                <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Key</span>
-                    <span className="font-mono">{resetTargetKey.keyCode}</span>
+      {/* Key List */}
+      {isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Memuat data...</span>
+        </div>
+      ) : keys.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="rounded-full bg-muted p-4 mb-4">
+            <KeyRound className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="text-sm font-medium">Belum ada key</p>
+          <p className="text-xs text-muted-foreground mt-1">Beli paket di halaman Store untuk mendapatkan key.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {keys.map((k) => {
+            const isActive = k.status === "active";
+            const hasHwid = !!k.hwid;
+            const nextAllowedAt = k.hwidResetAt ? new Date(k.hwidResetAt).getTime() + 20 * 60 * 1000 : null;
+            const msLeft = nextAllowedAt ? nextAllowedAt - nowMs : 0;
+            const canReset = isActive && hasHwid && (!nextAllowedAt || msLeft <= 0);
+
+            return (
+              <div key={k.id} className="rounded-xl border bg-card overflow-hidden">
+                {/* Top section */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-sm font-semibold break-all">{k.keyCode}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{k.packageTitle || "\u2014"}</div>
+                    </div>
+                    <Badge variant={statusVariant(k.status)} className="shrink-0">{k.status}</Badge>
                   </div>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">HWID</span>
-                    <span className="max-w-[220px] truncate font-mono text-xs">{resetTargetKey.hwid || "—"}</span>
+
+                  {/* Details grid */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="space-y-0.5">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Device</div>
+                      <div className="flex items-center gap-1.5">
+                        <Cpu className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-mono text-xs truncate">{k.hwid || "Tidak terikat"}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Berlaku hingga</div>
+                      <span className="text-xs font-medium">{formatDateId(k.expiresAt)}</span>
+                    </div>
                   </div>
                 </div>
-              ) : null}
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={resetHwidMutation.isPending}>Batal</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => resetTargetKey && resetHwidMutation.mutate(resetTargetKey)}
-                  disabled={!resetTargetKey || resetHwidMutation.isPending}
-                >
-                  {resetHwidMutation.isPending ? "Memproses..." : "Reset HWID"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
 
-          {isLoading ? (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                {keys.length === 0 ? (
-                  <div className="col-span-full text-center py-8 text-muted-foreground border rounded-lg border-dashed">
-                    Belum ada key.
+                {/* Action footer */}
+                {isActive && (
+                  <div className="border-t bg-muted/30 px-4 py-2.5 flex items-center justify-between">
+                    {!hasHwid ? (
+                      <span className="text-xs text-muted-foreground">Belum terikat device</span>
+                    ) : !canReset ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="h-3.5 w-3.5" />
+                        Cooldown {formatRemaining(msLeft)}
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1.5 text-xs"
+                        onClick={() => {
+                          setResetTargetKey(k);
+                          setResetDialogOpen(true);
+                        }}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Reset HWID
+                      </Button>
+                    )}
                   </div>
-                ) : (
-                  keys.map((k) => {
-                    const isActive = k.status === "active";
-                    const hasHwid = !!k.hwid;
-                    const nextAllowedAt = k.hwidResetAt ? new Date(k.hwidResetAt).getTime() + 20 * 60 * 1000 : null;
-                    const msLeft = nextAllowedAt ? nextAllowedAt - nowMs : 0;
-                    const canReset = isActive && hasHwid && (!nextAllowedAt || msLeft <= 0);
-                    return (
-                      <Card key={k.id} className="flex flex-col overflow-hidden bg-background/50">
-                        <div className="p-4 flex-1 space-y-4">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="font-mono text-lg font-bold">{k.keyCode}</div>
-                              <div className="text-sm text-muted-foreground line-clamp-1">{k.packageTitle || "—"}</div>
-                            </div>
-                            <Badge variant={k.status === "active" ? "default" : k.status === "expired" ? "destructive" : "secondary"}>
-                              {k.status}
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm border-t pt-3">
-                            <div>
-                              <span className="text-xs text-muted-foreground block">HWID</span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                <Cpu className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                <span className="truncate font-mono font-medium max-w-[100px]">{k.hwid || "—"}</span>
-                              </div>
-                            </div>
-                            <div>
-                              <span className="text-xs text-muted-foreground block">Expired</span>
-                              <span className="font-medium mt-0.5 block">{formatDateId(k.expiresAt)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="bg-muted/40 p-3 border-t flex items-center justify-between">
-                          {!isActive ? (
-                            <span className="text-xs text-muted-foreground">Tidak aktif</span>
-                          ) : !hasHwid ? (
-                            <span className="text-xs text-muted-foreground">Belum terikat device</span>
-                          ) : !canReset ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                              <Clock className="h-3.5 w-3.5" />
-                              Tunggu {formatRemaining(msLeft)}
-                            </span>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="w-full gap-2 bg-background/50 hover:bg-background"
-                              onClick={() => {
-                                setResetTargetKey(k);
-                                setResetDialogOpen(true);
-                              }}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                              Reset HWID
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })
                 )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

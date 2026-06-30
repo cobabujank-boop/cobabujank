@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, ShoppingCart } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components removed — using plain div wrappers now
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -276,8 +276,8 @@ export function UserPackages() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl font-bold tracking-wide">Packages</h1>
-        <p className="text-muted-foreground">Pilih paket, bayar via QRIS, key otomatis masuk.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Store</h1>
+        <p className="text-sm text-muted-foreground mt-1">Pilih paket, bayar via QRIS, key otomatis aktif.</p>
       </div>
 
       <Dialog
@@ -378,103 +378,102 @@ export function UserPackages() {
         </DialogContent>
       </Dialog>
 
-      <Card className="glass">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Purchase Packages
-          </CardTitle>
-          <CardDescription>Pilih paket yang kamu butuhkan. Pembayaran via QRIS.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {currentOrderId && currentStatus ? (
-            <div className="mb-6 rounded-xl border bg-background/60 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm text-muted-foreground">Order aktif</div>
-                  <div className="mt-1 font-mono text-sm">{currentOrderId}</div>
-                </div>
-                <Badge variant={currentStatus === "paid" ? "default" : currentStatus === "pending" ? "secondary" : "outline"}>{currentStatus}</Badge>
+      <div>
+        {/* Active order banner */}
+        {currentOrderId && currentStatus ? (
+          <div className="mb-5 rounded-xl border bg-card p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Order aktif</div>
+                <div className="mt-0.5 font-mono text-xs truncate">{currentOrderId}</div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button onClick={() => setPaymentDialogOpen(true)} disabled={!currentOrderId}>Bayar Sekarang</Button>
-                <Button variant="outline" onClick={() => currentOrderId && paymentLinkMutation.mutate(currentOrderId)} disabled={!currentOrderId || paymentLinkMutation.isPending}>
-                  {paymentLinkMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Buat Ulang QR
-                </Button>
-                <Button
-                  variant="outline"
-                  className="text-destructive"
-                  onClick={() => currentOrderId && cancelMutation.mutate(currentOrderId)}
-                  disabled={!currentOrderId || currentStatus !== "pending" || cancelMutation.isPending}
-                >
-                  {cancelMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Batalkan Pembelian
-                </Button>
-              </div>
+              <Badge variant={currentStatus === "paid" ? "default" : currentStatus === "pending" ? "secondary" : "outline"}>{currentStatus}</Badge>
             </div>
-          ) : null}
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => setPaymentDialogOpen(true)} disabled={!currentOrderId} className="flex-1 sm:flex-none">Bayar Sekarang</Button>
+              <Button size="sm" variant="outline" onClick={() => currentOrderId && paymentLinkMutation.mutate(currentOrderId)} disabled={!currentOrderId || paymentLinkMutation.isPending} className="flex-1 sm:flex-none">
+                {paymentLinkMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Refresh QR
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive flex-1 sm:flex-none"
+                onClick={() => currentOrderId && cancelMutation.mutate(currentOrderId)}
+                disabled={!currentOrderId || currentStatus !== "pending" || cancelMutation.isPending}
+              >
+                {cancelMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Batalkan
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
-          {packages.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Belum ada paket.</div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {packages.map((pkg) => (
-                <div key={pkg.id} className="group relative overflow-hidden rounded-xl border bg-background/60 p-4 shadow-sm transition hover:shadow-md">
-                  {(() => {
-                    const price = Number(pkg.price ?? 0) || 0;
-                    const original = Number(pkg.originalPrice ?? 0) || 0;
-                    const hasDiscount = original > 0 && original > price;
-                    return (
-                      <>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-semibold">{pkg.title}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">{pkg.durationDays} hari akses</div>
-                          </div>
-                          {pkg.isPopular ? <Badge>Popular</Badge> : null}
-                        </div>
-                        {pkg.imageUrl ? (
-                          <div className="mt-3 overflow-hidden rounded-lg border bg-muted/20">
-                            <img src={pkg.imageUrl} alt={pkg.title} className="h-28 w-full object-cover" />
+        {packages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium">Belum ada paket tersedia</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {packages.map((pkg) => {
+              const price = Number(pkg.price ?? 0) || 0;
+              const original = Number(pkg.originalPrice ?? 0) || 0;
+              const hasDiscount = original > 0 && original > price;
+              return (
+                <div key={pkg.id} className="rounded-xl border bg-card overflow-hidden flex flex-col transition-shadow hover:shadow-md">
+                  {/* Package image */}
+                  {pkg.imageUrl ? (
+                    <div className="aspect-[16/9] overflow-hidden bg-muted">
+                      <img src={pkg.imageUrl} alt={pkg.title} className="h-full w-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="aspect-[16/9] bg-gradient-to-br from-primary/5 via-background to-primary/10" />
+                  )}
+                  {/* Content */}
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-sm font-semibold">{pkg.title}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{pkg.durationDays} hari akses</div>
+                      </div>
+                      {pkg.isPopular ? <Badge variant="default" className="shrink-0">Popular</Badge> : null}
+                    </div>
+                    <div className="mt-3 flex-1" />
+                    <div className="space-y-3">
+                      <div>
+                        {hasDiscount ? (
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xs text-muted-foreground line-through">IDR {formatIdr(original)}</span>
+                            <span className="text-xl font-bold">IDR {formatIdr(price)}</span>
                           </div>
                         ) : (
-                          <div className="mt-3 h-28 overflow-hidden rounded-lg border bg-gradient-to-r from-primary/10 via-background to-orange-500/10" />
+                          <div className="text-xl font-bold">IDR {formatIdr(price)}</div>
                         )}
-                        <div className="mt-3 flex items-end justify-between gap-3">
-                          <div>
-                            {hasDiscount ? (
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-sm text-muted-foreground line-through">IDR {formatIdr(original)}</span>
-                                <span className="text-2xl font-bold">IDR {formatIdr(price)}</span>
-                              </div>
-                            ) : (
-                              <div className="text-2xl font-bold">IDR {formatIdr(price)}</div>
-                            )}
-                          </div>
-                          <div className="text-xs text-muted-foreground">QRIS</div>
-                        </div>
-                        <Button
-                          className="mt-3 w-full"
-                          onClick={() => buyMutation.mutate(pkg.id)}
-                          disabled={
-                            !token ||
-                            buyMutation.isPending ||
-                            (!!currentOrderId && currentStatus === "pending")
-                          }
-                        >
-                          {buyMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          Beli Paket
-                        </Button>
-                      </>
-                    );
-                  })()}
+                      </div>
+                      <Button
+                        className="w-full"
+                        size="sm"
+                        onClick={() => buyMutation.mutate(pkg.id)}
+                        disabled={
+                          !token ||
+                          buyMutation.isPending ||
+                          (!!currentOrderId && currentStatus === "pending")
+                        }
+                      >
+                        {buyMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Beli Paket
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

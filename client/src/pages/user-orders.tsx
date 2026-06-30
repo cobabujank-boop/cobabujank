@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// Removed Table imports
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useUserAuth } from "@/lib/user-auth";
@@ -124,49 +124,55 @@ export function UserOrders() {
               Loading...
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Package</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Belum ada order.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  orders.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-mono">{o.id}</TableCell>
-                      <TableCell>{o.packageTitle || "—"}</TableCell>
-                      <TableCell>IDR {formatIdr(o.price)}</TableCell>
-                      <TableCell>
-                        <Badge variant={o.status === "paid" ? "default" : o.status === "pending" ? "secondary" : "outline"}>{o.status}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        {o.status === "pending" ? (
-                          <Button size="sm" variant="outline" onClick={() => confirmMutation.mutate(o.id)} disabled={confirmMutation.isPending}>
-                            {confirmMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Cek Status
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatDateTimeId(o.createdAt)}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+              {orders.length === 0 ? (
+                <div className="col-span-full text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+                  Belum ada order.
+                </div>
+              ) : (
+                orders.map((o) => (
+                  <Card key={o.id} className="flex flex-col overflow-hidden bg-background/50">
+                    <div className="p-4 flex-1 space-y-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-semibold">{o.packageTitle || "—"}</div>
+                          <div className="text-xs text-muted-foreground font-mono mt-0.5">{o.id}</div>
+                        </div>
+                        <Badge variant={o.status === "paid" ? "default" : o.status === "pending" ? "secondary" : "outline"}>
+                          {o.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm border-t pt-3">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Harga</span>
+                          <span className="font-medium mt-0.5 block">IDR {formatIdr(o.price)}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Tanggal</span>
+                          <span className="font-medium mt-0.5 block">{formatDateTimeId(o.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {o.status === "pending" && (
+                      <div className="bg-muted/40 p-3 border-t">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full gap-2 bg-background/50 hover:bg-background"
+                          onClick={() => confirmMutation.mutate(o.id)} 
+                          disabled={confirmMutation.isPending}
+                        >
+                          {confirmMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                          Cek Status Pembayaran
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                ))
+              )}
+            </div>
           )}
         </CardContent>
       </Card>

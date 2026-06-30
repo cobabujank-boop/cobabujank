@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+// Removed Table imports
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useUserAuth } from "@/lib/user-auth";
@@ -194,24 +194,11 @@ export function UserKeys() {
               Loading...
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Package</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>HWID</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Expiration</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 {keys.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Belum ada key.
-                    </TableCell>
-                  </TableRow>
+                  <div className="col-span-full text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+                    Belum ada key.
+                  </div>
                 ) : (
                   keys.map((k) => {
                     const isActive = k.status === "active";
@@ -220,35 +207,47 @@ export function UserKeys() {
                     const msLeft = nextAllowedAt ? nextAllowedAt - nowMs : 0;
                     const canReset = isActive && hasHwid && (!nextAllowedAt || msLeft <= 0);
                     return (
-                      <TableRow key={k.id}>
-                        <TableCell className="font-mono">{k.keyCode}</TableCell>
-                        <TableCell>{k.packageTitle || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant={k.status === "active" ? "default" : k.status === "expired" ? "destructive" : "secondary"}>
-                            {k.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Cpu className="h-4 w-4 text-muted-foreground" />
-                            <span className="max-w-[180px] truncate font-mono text-xs">{k.hwid || "—"}</span>
+                      <Card key={k.id} className="flex flex-col overflow-hidden bg-background/50">
+                        <div className="p-4 flex-1 space-y-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="font-mono text-lg font-bold">{k.keyCode}</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">{k.packageTitle || "—"}</div>
+                            </div>
+                            <Badge variant={k.status === "active" ? "default" : k.status === "expired" ? "destructive" : "secondary"}>
+                              {k.status}
+                            </Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>
+                          
+                          <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm border-t pt-3">
+                            <div>
+                              <span className="text-xs text-muted-foreground block">HWID</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <Cpu className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <span className="truncate font-mono font-medium max-w-[100px]">{k.hwid || "—"}</span>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-xs text-muted-foreground block">Expired</span>
+                              <span className="font-medium mt-0.5 block">{formatDateId(k.expiresAt)}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-muted/40 p-3 border-t flex items-center justify-between">
                           {!isActive ? (
-                            <span className="text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">Tidak aktif</span>
                           ) : !hasHwid ? (
-                            <span className="text-muted-foreground">Belum terikat</span>
+                            <span className="text-xs text-muted-foreground">Belum terikat device</span>
                           ) : !canReset ? (
-                            <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                               <Clock className="h-3.5 w-3.5" />
-                              {formatRemaining(msLeft)}
+                              Tunggu {formatRemaining(msLeft)}
                             </span>
                           ) : (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="gap-2"
+                              className="w-full gap-2 bg-background/50 hover:bg-background"
                               onClick={() => {
                                 setResetTargetKey(k);
                                 setResetDialogOpen(true);
@@ -258,14 +257,12 @@ export function UserKeys() {
                               Reset HWID
                             </Button>
                           )}
-                        </TableCell>
-                        <TableCell>{formatDateId(k.expiresAt)}</TableCell>
-                      </TableRow>
+                        </div>
+                      </Card>
                     );
                   })
                 )}
-              </TableBody>
-            </Table>
+            </div>
           )}
         </CardContent>
       </Card>
